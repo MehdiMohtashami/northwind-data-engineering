@@ -18,8 +18,18 @@ BEGIN
         source_table       VARCHAR(128) NOT NULL UNIQUE,
         capture_instance   VARCHAR(128) NOT NULL,
         last_lsn           VARBINARY(10) NULL,
-        last_processed_at  DATETIME2 NULL
+        last_processed_at  DATETIME2 NULL,
+        -- Phase 4: separate watermark for the Kafka streaming producer, so the
+        -- (paused) batch DAG's last_lsn and the stream never fight over the
+        -- same cursor.
+        stream_last_lsn    VARBINARY(10) NULL
     );
+END
+GO
+
+IF COL_LENGTH('dbo.cdc_state', 'stream_last_lsn') IS NULL
+BEGIN
+    ALTER TABLE dbo.cdc_state ADD stream_last_lsn VARBINARY(10) NULL;
 END
 GO
 
@@ -102,13 +112,29 @@ BEGIN
 END
 GO
 
+-- Phase 4 (scoped proof-of-concept): CDC on one dimension source table, so the
+-- streaming consumer can soft-delete a dim row (is_current=0) when it's
+-- removed from OLTP -- a gap the Phase 2 batch SCD jobs don't cover (they only
+-- ever notice new/changed business keys, never one that vanished from source).
+IF NOT EXISTS (SELECT 1 FROM cdc.change_tables WHERE capture_instance = 'dbo_Suppliers')
+BEGIN
+    EXEC sys.sp_cdc_enable_table
+        @source_schema        = N'dbo',
+        @source_name          = N'Suppliers',
+        @capture_instance     = N'dbo_Suppliers',
+        @role_name            = NULL,
+        @supports_net_changes = 1;
+END
+GO
+
 USE ETL_Settings;
 GO
 
 MERGE dbo.cdc_state AS tgt
 USING (VALUES
     ('Orders',         'dbo_Orders'),
-    ('Order Details',  'dbo_OrderDetails')
+    ('Order Details',  'dbo_OrderDetails'),
+    ('Suppliers',      'dbo_Suppliers')
 ) AS src (source_table, capture_instance)
 ON tgt.source_table = src.source_table
 WHEN NOT MATCHED THEN

@@ -220,3 +220,45 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning
     networks:
       - nw_de_net
+
+  producer:
+    build:
+      context: ./streaming/producer
+    container_name: nw_de_producer
+    environment:
+      MSSQL_HOST: sqlserver
+      MSSQL_PORT: "1433"
+      MSSQL_DB: Northwind
+      MSSQL_USER: sa
+      MSSQL_PASSWORD: ${MSSQL_SA_PASSWORD}
+      KAFKA_BOOTSTRAP: kafka:29092
+      POLL_INTERVAL_SECONDS: "2.5"
+    depends_on:
+      - kafka
+      - sqlserver
+    networks:
+      - nw_de_net
+
+  consumer:
+    build:
+      context: ./streaming/consumer
+    container_name: nw_de_consumer
+    environment:
+      MSSQL_HOST: sqlserver
+      MSSQL_PORT: "1433"
+      MSSQL_DB: Northwind
+      MSSQL_USER: sa
+      MSSQL_PASSWORD: ${MSSQL_SA_PASSWORD}
+      CH_HOST: clickhouse
+      CH_PORT: "8123"
+      CH_USER: default
+      CH_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CH_DATABASE: NorthwindDW
+      KAFKA_BOOTSTRAP: kafka:29092
+      KAFKA_GROUP_ID: nw-cdc-consumer
+    depends_on:
+      - kafka
+      - sqlserver
+      - clickhouse
+    networks:
+      - nw_de_net

@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimSuppliers
     is_current    UInt8 DEFAULT 1,
     Startdate     Date DEFAULT toDate('1970-01-01'),
     Enddate       Date DEFAULT toDate('2099-12-31'),
-    version       UInt32
+    version       UInt64  -- widened from UInt32 in Phase 4: the streaming delete
+                          -- proof-of-concept writes LSN-derived versions here too.
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY SupplierKey;
@@ -180,7 +181,9 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactOrders
     Discount         Float32,
     Freight          Nullable(Decimal(19,4)),
     is_deleted       UInt8 DEFAULT 0,
-    version          UInt32
+    version          UInt64  -- widened from UInt32 in Phase 4: streaming writes use the
+                              -- first 8 bytes of the CDC LSN (big-endian) as version, so
+                              -- replays are truly idempotent (same LSN -> same version).
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY (OrderID, ProductKey);
