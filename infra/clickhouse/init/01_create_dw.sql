@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimGeography
     is_current   UInt8 DEFAULT 1,
     Startdate    Date DEFAULT toDate('1970-01-01'),
     Enddate      Date DEFAULT toDate('2099-12-31'),
-    version      UInt32
+    version      UInt32,
+    is_inferred  UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY GeographyKey;
@@ -51,7 +52,8 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimProducts
     is_current       UInt8 DEFAULT 1,
     Startdate        Date DEFAULT toDate('1970-01-01'),
     Enddate          Date DEFAULT toDate('2099-12-31'),
-    version          UInt32
+    version          UInt32,
+    is_inferred      UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY ProductKey;
@@ -68,7 +70,8 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimCustomer
     is_current    UInt8 DEFAULT 1,
     Startdate     Date DEFAULT toDate('1970-01-01'),
     Enddate       Date DEFAULT toDate('2099-12-31'),
-    version       UInt32
+    version       UInt32,
+    is_inferred   UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY CustomerKey;
@@ -88,7 +91,8 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimEmployees
     is_current       UInt8 DEFAULT 1,
     Startdate        Date DEFAULT toDate('1970-01-01'),
     Enddate          Date DEFAULT toDate('2099-12-31'),
-    version          UInt32
+    version          UInt32,
+    is_inferred      UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY EmployeeKey;
@@ -115,7 +119,8 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimShippers
     ShipperID    Int32,
     CompanyName  String,
     Phone        Nullable(String),
-    version      UInt32
+    version      UInt32,
+    is_inferred  UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY ShipperKey;
@@ -165,6 +170,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactOrders
     CustomerKey      UInt32,
     EmployeeKey      UInt32,
     ShipperKey       UInt32,
+    GeographyKey     UInt32 DEFAULT 0,   -- ship-to geography
     ShipName         Nullable(String),   -- degenerate dimension, no DimShipName (matches professor's design)
     OrderDateKey     UInt32,
     RequiredDateKey  Nullable(UInt32),
@@ -211,7 +217,7 @@ SELECT
     s.ShipperID,
     s.CompanyName    AS ShipperName,
     f.ShipName,
-    f.UnitPrice,
+    f.UnitPrice AS UnitPrice,
     f.Quantity,
     f.Discount,
     f.Freight,

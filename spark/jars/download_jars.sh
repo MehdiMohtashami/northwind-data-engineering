@@ -10,4 +10,7 @@ curl -sL -o postgresql-42.7.3.jar \
 curl -sL -o clickhouse-jdbc-0.6.5-shaded.jar \
   "https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.6.5/clickhouse-jdbc-0.6.5-shaded.jar"
 
+curl -sL -o mssql-jdbc-12.10.1.jre11.jar \
+  "https://repo1.maven.org/maven2/com/microsoft/sqlserver/mssql-jdbc/12.10.1.jre11/mssql-jdbc-12.10.1.jre11.jar"
+
 echo "Downloaded: $(ls -1 *.jar)"

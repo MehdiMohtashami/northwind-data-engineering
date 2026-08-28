@@ -27,11 +27,12 @@ import argparse
 import time
 
 from pyspark.sql import functions as F
-from pyspark.sql.types import LongType
+from pyspark.sql.types import LongType, StringType, DateType
 from pyspark.sql.window import Window
 
 PG_DRIVER = "org.postgresql.Driver"
 CH_DRIVER = "com.clickhouse.jdbc.ClickHouseDriver"
+MSSQL_DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
 
 FAR_FUTURE_DATE = "2099-12-31"  # ClickHouse's 2-byte Date type maxes out around 2149-06-06
 _NULL_MARKER = "__NULL__"
@@ -39,15 +40,18 @@ _NULL_MARKER = "__NULL__"
 _state = {}
 
 
-def init(spark, pg_jdbc_url, pg_user, pg_password, ch_jdbc_url, ch_user, ch_password):
+def init(spark, pg_jdbc_url, pg_user, pg_password, ch_jdbc_url, ch_user, ch_password,
+         mssql_jdbc_url=None, mssql_user=None, mssql_password=None):
     """Call once per job run before using any other helper in this module."""
     _state["spark"] = spark
     _state["pg"] = {"url": pg_jdbc_url, "user": pg_user, "password": pg_password, "driver": PG_DRIVER}
     _state["ch"] = {"url": ch_jdbc_url, "user": ch_user, "password": ch_password, "driver": CH_DRIVER}
+    if mssql_jdbc_url is not None:
+        _state["mssql"] = {"url": mssql_jdbc_url, "user": mssql_user, "password": mssql_password, "driver": MSSQL_DRIVER}
     _state["run_version"] = int(time.time() * 1000)
 
 
-def build_arg_parser(description):
+def build_arg_parser(description, needs_mssql=False):
     """Standard JDBC connection args shared by every dimension/fact load job."""
     p = argparse.ArgumentParser(description=description)
     p.add_argument("--pg-jdbc-url", required=True)
@@ -56,6 +60,10 @@ def build_arg_parser(description):
     p.add_argument("--ch-jdbc-url", required=True)
     p.add_argument("--ch-user", required=True)
     p.add_argument("--ch-password", required=True)
+    if needs_mssql:
+        p.add_argument("--mssql-jdbc-url", required=True)
+        p.add_argument("--mssql-user", required=True)
+        p.add_argument("--mssql-password", required=True)
     return p
 
 
@@ -64,6 +72,9 @@ def init_from_args(spark, args):
         spark,
         pg_jdbc_url=args.pg_jdbc_url, pg_user=args.pg_user, pg_password=args.pg_password,
         ch_jdbc_url=args.ch_jdbc_url, ch_user=args.ch_user, ch_password=args.ch_password,
+        mssql_jdbc_url=getattr(args, "mssql_jdbc_url", None),
+        mssql_user=getattr(args, "mssql_user", None),
+        mssql_password=getattr(args, "mssql_password", None),
     )
 
 
@@ -87,6 +98,10 @@ def _jdbc_read(opts, dbtable):
 
 def read_pg(table):
     return _jdbc_read(_state["pg"], table)
+
+
+def read_mssql(query_or_table):
+    return _jdbc_read(_state["mssql"], query_or_table)
 
 
 def read_ch(table):
@@ -292,3 +307,87 @@ def lookup(df, dim_table, on, key_out):
     df = df.drop(key_out)
     joined = df.join(dim_renamed, on=cond, how="left").drop(*[f"_lk_{i}" for i in range(len(pairs))])
     return joined
+
+
+def _ch_column_nullability(table):
+    """True nullability per column, straight from ClickHouse's own system.columns.
+    Spark's DataFrame.schema[*].nullable (as reported through the JDBC driver) is
+    NOT reliable for ClickHouse -- it comes back True for columns that are actually
+    non-nullable in the table definition, which fails at write time with
+    'Cannot set null to non-nullable column'."""
+    db, _, tbl = table.rpartition(".")
+    rows = _jdbc_read(
+        _state["ch"], f"(SELECT name, type FROM system.columns WHERE database = '{db}' AND table = '{tbl}') t"
+    ).collect()
+    return {r["name"]: r["type"].startswith("Nullable(") for r in rows}
+
+
+def _on_pairs(on):
+    if isinstance(on, str):
+        return [(on, on)]
+    if isinstance(on, dict):
+        return list(on.items())
+    return [(c, c) for c in on]
+
+
+def lookup_or_infer(df, dim_table, on, key_out):
+    """
+    Like lookup(), but any row whose natural key doesn't match a current dim row
+    gets a minimal placeholder inserted into dim_table first (business/natural key
+    columns filled in, everything else defaulted -- 'Unknown' for non-nullable
+    strings, 0 for non-nullable numerics, NULL for nullable columns -- is_current=1,
+    is_inferred=1, a fresh stable surrogate key), and the lookup is re-run so it
+    resolves to that placeholder's key.
+
+    Used for CDC fact loads, where a change can reference a business key
+    (ProductID, CustomerID, ...) that hasn't reached its dimension yet. Filling in
+    the *real* attributes for an inferred row later is a separate reconciliation
+    step (not implemented here) -- see docs/phase3_inferred_members.md.
+    """
+    resolved = lookup(df, dim_table, on, key_out)
+    if not resolved.filter(F.col(key_out).isNull()).take(1):
+        return resolved
+
+    pairs = _on_pairs(on)
+    natural_cols = {dc for _, dc in pairs}
+
+    dim_current = read_ch(dim_table)
+    dim_key_col = dim_current.columns[0]
+
+    missing_keys = (
+        resolved.filter(F.col(key_out).isNull())
+        .select(*[F.col(sc).alias(dc) for sc, dc in pairs])
+        .distinct()
+    )
+
+    true_nullable = _ch_column_nullability(dim_table)
+
+    placeholder = missing_keys
+    for field in dim_current.schema.fields:
+        name = field.name
+        if name in natural_cols or name == dim_key_col:
+            continue
+        if name == "is_current":
+            placeholder = placeholder.withColumn(name, F.lit(1).cast(field.dataType))
+        elif name == "Startdate":
+            placeholder = placeholder.withColumn(name, F.current_date())
+        elif name == "Enddate":
+            placeholder = placeholder.withColumn(name, F.to_date(F.lit(FAR_FUTURE_DATE)))
+        elif name == "version":
+            placeholder = placeholder.withColumn(name, F.lit(run_version()).cast(LongType()))
+        elif name == "is_inferred":
+            placeholder = placeholder.withColumn(name, F.lit(1).cast(field.dataType))
+        elif true_nullable.get(name, field.nullable):
+            placeholder = placeholder.withColumn(name, F.lit(None).cast(field.dataType))
+        elif isinstance(field.dataType, StringType):
+            placeholder = placeholder.withColumn(name, F.lit("Unknown").cast(field.dataType))
+        elif isinstance(field.dataType, (DateType,)):
+            placeholder = placeholder.withColumn(name, F.current_date())
+        else:
+            placeholder = placeholder.withColumn(name, F.lit(0).cast(field.dataType))
+
+    placeholder = assign_surrogate_keys(placeholder, dim_table, dim_key_col)
+    placeholder = materialize(placeholder.select(*dim_current.columns))
+    write_ch_append(placeholder, dim_table)
+
+    return lookup(df, dim_table, on, key_out)
