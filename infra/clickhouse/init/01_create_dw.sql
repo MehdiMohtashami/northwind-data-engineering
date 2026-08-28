@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimGeography
     PostalCode   Nullable(String),
     is_current   UInt8 DEFAULT 1,
     Startdate    Date DEFAULT toDate('1970-01-01'),
-    Enddate      Date DEFAULT toDate('9999-12-31'),
+    Enddate      Date DEFAULT toDate('2099-12-31'),
     version      UInt32
 )
 ENGINE = ReplacingMergeTree(version)
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimSuppliers
     GeographyKey  UInt32,
     is_current    UInt8 DEFAULT 1,
     Startdate     Date DEFAULT toDate('1970-01-01'),
-    Enddate       Date DEFAULT toDate('9999-12-31'),
+    Enddate       Date DEFAULT toDate('2099-12-31'),
     version       UInt32
 )
 ENGINE = ReplacingMergeTree(version)
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimProducts
     Discontinued     UInt8,
     is_current       UInt8 DEFAULT 1,
     Startdate        Date DEFAULT toDate('1970-01-01'),
-    Enddate          Date DEFAULT toDate('9999-12-31'),
+    Enddate          Date DEFAULT toDate('2099-12-31'),
     version          UInt32
 )
 ENGINE = ReplacingMergeTree(version)
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimCustomer
     GeographyKey  UInt32,
     is_current    UInt8 DEFAULT 1,
     Startdate     Date DEFAULT toDate('1970-01-01'),
-    Enddate       Date DEFAULT toDate('9999-12-31'),
+    Enddate       Date DEFAULT toDate('2099-12-31'),
     version       UInt32
 )
 ENGINE = ReplacingMergeTree(version)
@@ -81,13 +81,13 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimEmployees
     FirstName        String,
     Title            Nullable(String),
     TitleOfCourtesy  Nullable(String),
-    BirthDate        Nullable(Date),
+    BirthDate        Nullable(Date32),  -- Date32 (not Date) since Northwind employees were born before 1970
     HireDate         Nullable(Date),
     GeographyKey     UInt32,
     ManagerKey       Nullable(UInt32),
     is_current       UInt8 DEFAULT 1,
     Startdate        Date DEFAULT toDate('1970-01-01'),
-    Enddate          Date DEFAULT toDate('9999-12-31'),
+    Enddate          Date DEFAULT toDate('2099-12-31'),
     version          UInt32
 )
 ENGINE = ReplacingMergeTree(version)
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimTerritories
     TerritoryDescription  String,
     is_current            UInt8 DEFAULT 1,
     Startdate             Date DEFAULT toDate('1970-01-01'),
-    Enddate               Date DEFAULT toDate('9999-12-31'),
+    Enddate               Date DEFAULT toDate('2099-12-31'),
     version               UInt32
 )
 ENGINE = ReplacingMergeTree(version)
@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactOrders
     UnitPrice        Decimal(19,4),
     Quantity         Int16,
     Discount         Float32,
-    Freight          Decimal(19,4),
+    Freight          Nullable(Decimal(19,4)),
     is_deleted       UInt8 DEFAULT 0,
     version          UInt32
 )

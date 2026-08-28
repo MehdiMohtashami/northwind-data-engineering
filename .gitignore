@@ -7,3 +7,4 @@ airflow/logs/
 *.pyo
 .DS_Store
 *.log
+spark/jars/*.jar

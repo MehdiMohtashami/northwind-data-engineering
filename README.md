@@ -12,6 +12,9 @@ other Docker workloads on the host.
   - `Northwind.bak` — OLTP source (`Northwind` DB, the CDC source)
   - `instnwnd.sql` — fallback OLTP install script (unused unless `.bak` restore fails)
   - `Northwind_DW_1404_08_14_Full.bak` — professor's reference DW backup
+- JDBC driver jars (git-ignored binaries): run `spark/jars/download_jars.sh` once
+  after cloning to fetch the Postgres and ClickHouse JDBC drivers used by the
+  PySpark load jobs.
 
 ## Up / Down
 
