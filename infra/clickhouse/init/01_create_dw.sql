@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimCustomer
 ENGINE = ReplacingMergeTree(version)
 ORDER BY CustomerKey;
 
-CREATE TABLE IF NOT EXISTS NorthwindDW.DimEmployee
+CREATE TABLE IF NOT EXISTS NorthwindDW.DimEmployees
 (
     EmployeeKey      UInt32,
     EmployeeID       Int32,
@@ -93,6 +93,20 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimEmployee
 ENGINE = ReplacingMergeTree(version)
 ORDER BY EmployeeKey;
 
+CREATE TABLE IF NOT EXISTS NorthwindDW.DimTerritories
+(
+    TerritoryKey          UInt32,
+    TerritoryID           String,
+    RegionDescription     Nullable(String),
+    TerritoryDescription  String,
+    is_current            UInt8 DEFAULT 1,
+    Startdate             Date DEFAULT toDate('1970-01-01'),
+    Enddate               Date DEFAULT toDate('9999-12-31'),
+    version               UInt32
+)
+ENGINE = ReplacingMergeTree(version)
+ORDER BY TerritoryKey;
+
 -- SCD1 dims (type1 in ETL_Settings.table_config): overwrite in place via version bump, no history columns.
 
 CREATE TABLE IF NOT EXISTS NorthwindDW.DimShippers
@@ -105,20 +119,6 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimShippers
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY ShipperKey;
-
-CREATE TABLE IF NOT EXISTS NorthwindDW.DimShipName
-(
-    ShipNameKey     UInt32,
-    ShipName        String,
-    ShipAddress     Nullable(String),
-    ShipCity        Nullable(String),
-    ShipRegion      Nullable(String),
-    ShipPostalCode  Nullable(String),
-    ShipCountry     Nullable(String),
-    version         UInt32
-)
-ENGINE = ReplacingMergeTree(version)
-ORDER BY ShipNameKey;
 
 -- Type0 (static, no versioning needed)
 CREATE TABLE IF NOT EXISTS NorthwindDW.DimDate
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactOrders
     CustomerKey      UInt32,
     EmployeeKey      UInt32,
     ShipperKey       UInt32,
-    ShipNameKey      UInt32,
+    ShipName         Nullable(String),   -- degenerate dimension, no DimShipName (matches professor's design)
     OrderDateKey     UInt32,
     RequiredDateKey  Nullable(UInt32),
     ShippedDateKey   Nullable(UInt32),
@@ -178,6 +178,18 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactOrders
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY (OrderID, ProductKey);
+
+-- ============ FACTLESS BRIDGE ============
+
+CREATE TABLE IF NOT EXISTS NorthwindDW.FactEmployeeTerritories
+(
+    EmployeeKey   UInt32,
+    TerritoryKey  UInt32,
+    is_deleted    UInt8 DEFAULT 0,
+    version       UInt32
+)
+ENGINE = ReplacingMergeTree(version)
+ORDER BY (EmployeeKey, TerritoryKey);
 
 -- ============ FLAT VIEW FOR GRAFANA ============
 
@@ -198,9 +210,7 @@ SELECT
     concat(e.FirstName, ' ', e.LastName) AS EmployeeName,
     s.ShipperID,
     s.CompanyName    AS ShipperName,
-    sn.ShipName,
-    sn.ShipCity,
-    sn.ShipCountry,
+    f.ShipName,
     f.UnitPrice,
     f.Quantity,
     f.Discount,
@@ -210,9 +220,8 @@ FROM
 (
     SELECT * FROM NorthwindDW.FactOrders FINAL WHERE is_deleted = 0
 ) AS f
-LEFT JOIN (SELECT * FROM NorthwindDW.DimProducts  FINAL) AS p  ON f.ProductKey  = p.ProductKey
-LEFT JOIN (SELECT * FROM NorthwindDW.DimCustomer  FINAL) AS c  ON f.CustomerKey = c.CustomerKey
-LEFT JOIN (SELECT * FROM NorthwindDW.DimEmployee  FINAL) AS e  ON f.EmployeeKey = e.EmployeeKey
-LEFT JOIN (SELECT * FROM NorthwindDW.DimShippers  FINAL) AS s  ON f.ShipperKey  = s.ShipperKey
-LEFT JOIN (SELECT * FROM NorthwindDW.DimShipName  FINAL) AS sn ON f.ShipNameKey = sn.ShipNameKey
-LEFT JOIN (SELECT * FROM NorthwindDW.DimDate)            AS dd ON f.OrderDateKey = dd.DateKey;
+LEFT JOIN (SELECT * FROM NorthwindDW.DimProducts   FINAL) AS p  ON f.ProductKey  = p.ProductKey
+LEFT JOIN (SELECT * FROM NorthwindDW.DimCustomer   FINAL) AS c  ON f.CustomerKey = c.CustomerKey
+LEFT JOIN (SELECT * FROM NorthwindDW.DimEmployees  FINAL) AS e  ON f.EmployeeKey = e.EmployeeKey
+LEFT JOIN (SELECT * FROM NorthwindDW.DimShippers   FINAL) AS s  ON f.ShipperKey  = s.ShipperKey
+LEFT JOIN (SELECT * FROM NorthwindDW.DimDate)             AS dd ON f.OrderDateKey = dd.DateKey;

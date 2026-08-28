@@ -11,7 +11,10 @@ volumes:
   grafana_data:
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.8.1-python3.10
+  build:
+    context: ./airflow
+    dockerfile: Dockerfile
+  image: nw_de/airflow:2.8.1-mssql-pg-ch
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow

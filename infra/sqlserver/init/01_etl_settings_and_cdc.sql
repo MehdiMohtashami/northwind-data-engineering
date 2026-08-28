@@ -52,15 +52,16 @@ GO
 
 MERGE dbo.table_config AS tgt
 USING (VALUES
-    ('DimDate',       'dimension', '0',   1),
-    ('DimGeography',  'dimension', '2',   2),
-    ('DimSuppliers',  'dimension', '2',   3),
-    ('DimProducts',   'dimension', '2',   4),
-    ('DimCustomer',   'dimension', '2',   5),
-    ('DimEmployee',   'dimension', '2',   6),
-    ('DimShippers',   'dimension', '1',   7),
-    ('DimShipName',   'dimension', '1',   8),
-    ('FactOrders',    'fact',      'cdc', 9)
+    ('DimDate',                 'dimension', '0',      1),
+    ('DimGeography',            'dimension', '2',      2),
+    ('DimSuppliers',            'dimension', '2',      3),
+    ('DimProducts',             'dimension', '2',      4),
+    ('DimCustomer',             'dimension', '2',      5),
+    ('DimEmployees',            'dimension', '2',      6),
+    ('DimTerritories',          'dimension', '2',      7),
+    ('DimShippers',             'dimension', '1',      8),
+    ('FactOrders',              'fact',      'cdc',    9),
+    ('FactEmployeeTerritories', 'fact',      'bridge', 10)
 ) AS src (table_name, table_type, scd_type, load_order)
 ON tgt.table_name = src.table_name
 WHEN NOT MATCHED THEN
