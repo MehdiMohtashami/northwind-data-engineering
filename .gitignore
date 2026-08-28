@@ -1,0 +1,9 @@
+backups/
+*.bak
+.env
+airflow/logs/
+**/__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.log

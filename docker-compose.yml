@@ -1,0 +1,218 @@
+networks:
+  nw_de_net:
+    name: nw_de_net
+
+volumes:
+  sqlserver_data:
+  postgres_staging_data:
+  clickhouse_data:
+  postgres_airflow_data:
+  spark_data:
+  grafana_data:
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.8.1-python3.10
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_airflow/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./airflow/logs:/opt/airflow/logs
+    - ./spark:/opt/airflow/spark
+  networks:
+    - nw_de_net
+  depends_on:
+    postgres_airflow:
+      condition: service_healthy
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: nw_de_sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MSSQL_PID: Developer
+      MSSQL_AGENT_ENABLED: "true"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./infra/sqlserver/init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -N -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - nw_de_net
+
+  postgres_staging:
+    image: postgres:16
+    container_name: nw_de_postgres_staging
+    environment:
+      POSTGRES_DB: ${PG_STAGING_DB}
+      POSTGRES_USER: ${PG_STAGING_USER}
+      POSTGRES_PASSWORD: ${PG_STAGING_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${PG_STAGING_USER} -d $${PG_STAGING_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nw_de_net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: nw_de_clickhouse
+    environment:
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infra/clickhouse/init:/docker-entrypoint-initdb.d
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nw_de_net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: nw_de_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - nw_de_net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: nw_de_kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - nw_de_net
+
+  postgres_airflow:
+    image: postgres:16
+    container_name: nw_de_postgres_airflow
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - nw_de_net
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: nw_de_airflow_init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create --username admin --password admin --firstname Admin --lastname Admin --role Admin --email admin@example.com || true
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: nw_de_airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: nw_de_airflow_scheduler
+    command: scheduler
+    depends_on:
+      postgres_airflow:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  spark:
+    image: bitnamilegacy/spark:3.5
+    container_name: nw_de_spark_master
+    environment:
+      SPARK_MODE: master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    volumes:
+      - ./spark:/opt/bitnami/spark/work-dir
+      - spark_data:/bitnami
+    networks:
+      - nw_de_net
+
+  spark-worker:
+    image: bitnamilegacy/spark:3.5
+    container_name: nw_de_spark_worker
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark:7077
+    volumes:
+      - ./spark:/opt/bitnami/spark/work-dir
+    depends_on:
+      - spark
+    networks:
+      - nw_de_net
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: nw_de_grafana
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - nw_de_net

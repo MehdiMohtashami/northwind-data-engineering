@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: ClickHouse-NorthwindDW
+    type: grafana-clickhouse-datasource
+    access: proxy
+    isDefault: true
+    jsonData:
+      host: clickhouse
+      port: 9000
+      protocol: native
+      defaultDatabase: NorthwindDW
+      username: default
+    secureJsonData:
+      password: "clickhouse123"
