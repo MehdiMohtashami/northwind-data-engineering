@@ -1,0 +1,22 @@
+{
+  "index_patterns": ["nw-cdc-events-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "ts": { "type": "date" },
+        "op": { "type": "keyword" },
+        "table": { "type": "keyword" },
+        "lsn": { "type": "keyword" },
+        "order_id": { "type": "integer" },
+        "product_id": { "type": "integer" },
+        "latency_ms": { "type": "float" },
+        "after": { "type": "object", "enabled": true }
+      }
+    }
+  }
+}

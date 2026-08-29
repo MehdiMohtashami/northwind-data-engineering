@@ -28,11 +28,13 @@ import json
 import logging
 import os
 import time
-from datetime import date
+import urllib.request
+from datetime import date, datetime, timezone
 
 import clickhouse_connect
 import pymssql
 from confluent_kafka import Consumer
+from pymongo import MongoClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("cdc-consumer")
@@ -48,6 +50,13 @@ CH_PORT = int(os.environ.get("CH_PORT", "8123"))
 CH_USER = os.environ.get("CH_USER", "default")
 CH_PASSWORD = os.environ.get("CH_PASSWORD", "")
 CH_DATABASE = os.environ.get("CH_DATABASE", "NorthwindDW")
+
+MONGO_HOST = os.environ.get("MONGO_HOST", "mongodb")
+MONGO_PORT = int(os.environ.get("MONGO_PORT", "27017"))
+MONGO_USER = os.environ.get("MONGO_USER", "")
+MONGO_PASSWORD = os.environ.get("MONGO_PASSWORD", "")
+
+ES_URL = os.environ.get("ES_URL", "http://elasticsearch:9200")
 
 KAFKA_BOOTSTRAP = os.environ.get("KAFKA_BOOTSTRAP", "kafka:29092")
 GROUP_ID = os.environ.get("KAFKA_GROUP_ID", "nw-cdc-consumer")
@@ -336,6 +345,65 @@ def apply_suppliers_change(client, msg):
     log.info("suppliers DELETE supplier_id=%s (SupplierKey=%s) expired", supplier_id, row["SupplierKey"])
 
 
+def get_mongo_collection():
+    """Durable CDC event log (Phase 6B). Best-effort: a Mongo hiccup must
+    never block the actual ClickHouse pipeline (see log_event's own
+    try/except)."""
+    uri = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/?authSource=admin"
+    client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+    return client["monitoring"]["cdc_events"]
+
+
+def _parse_event_ts(ts_str):
+    return datetime.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def _index_to_es(doc):
+    """Best-effort: mirrors the same monitoring doc into Elasticsearch
+    (nw-consumer-events-*), giving Kibana a genuine processing-outcome
+    source (status/error/latency_ms) distinct from the raw Kafka-mirrored
+    nw-cdc-events-* index Logstash writes."""
+    index = f"nw-consumer-events-{doc['processed_ts'].strftime('%Y.%m.%d')}"
+    es_doc = {k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in doc.items()}
+    body = json.dumps(es_doc).encode("utf-8")
+    req = urllib.request.Request(
+        f"{ES_URL}/{index}/_doc", data=body, method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        resp.read()
+
+
+def log_event(mongo_col, payload, status, error=None):
+    after = payload.get("after") or {}
+    event_ts = _parse_event_ts(payload["ts"]) if payload.get("ts") else None
+    processed_ts = datetime.now(timezone.utc)
+    latency_ms = (processed_ts - event_ts).total_seconds() * 1000 if event_ts else None
+    doc = {
+        "op": payload.get("op"),
+        "table": payload.get("table"),
+        "order_id": after.get("OrderID"),
+        "product_id": after.get("ProductID"),
+        "lsn": payload.get("lsn"),
+        "event_ts": event_ts,
+        "processed_ts": processed_ts,
+        "latency_ms": latency_ms,
+        "status": status,
+    }
+    if error:
+        doc["error"] = error
+
+    try:
+        mongo_col.insert_one(dict(doc))
+    except Exception:
+        log.exception("failed to write monitoring event to MongoDB (non-fatal)")
+
+    try:
+        _index_to_es(doc)
+    except Exception:
+        log.exception("failed to write monitoring event to Elasticsearch (non-fatal)")
+
+
 def main():
     ch_client = clickhouse_connect.get_client(
         host=CH_HOST, port=CH_PORT, username=CH_USER, password=CH_PASSWORD, database=CH_DATABASE,
@@ -345,6 +413,8 @@ def main():
         user=MSSQL_USER, password=MSSQL_PASSWORD, autocommit=True,
     )
 
+    mongo_col = get_mongo_collection()
+
     consumer = Consumer({
         "bootstrap.servers": KAFKA_BOOTSTRAP,
         "group.id": GROUP_ID,
@@ -352,8 +422,9 @@ def main():
         "enable.auto.commit": False,
     })
     consumer.subscribe([TOPIC_ORDERS, TOPIC_ORDER_DETAILS, TOPIC_SUPPLIERS])
-    log.info("CDC consumer starting: kafka=%s group=%s ch=%s:%s mssql=%s:%s/%s",
-              KAFKA_BOOTSTRAP, GROUP_ID, CH_HOST, CH_PORT, MSSQL_HOST, MSSQL_PORT, MSSQL_DB)
+    log.info("CDC consumer starting: kafka=%s group=%s ch=%s:%s mssql=%s:%s/%s mongo=%s:%s",
+              KAFKA_BOOTSTRAP, GROUP_ID, CH_HOST, CH_PORT, MSSQL_HOST, MSSQL_PORT, MSSQL_DB,
+              MONGO_HOST, MONGO_PORT)
 
     try:
         while True:
@@ -366,6 +437,12 @@ def main():
 
             try:
                 payload = json.loads(msg.value())
+            except Exception:
+                log.exception("failed to parse message JSON, skipping: %s", msg.value())
+                consumer.commit(msg)
+                continue
+
+            try:
                 t0 = time.time()
                 if payload["table"] == "OrderDetails":
                     apply_order_details_change(ch_client, mssql_conn, payload)
@@ -376,9 +453,11 @@ def main():
                 else:
                     log.warning("unknown table in message: %s", payload.get("table"))
                 log.info("applied in %.3fs (lsn=%s)", time.time() - t0, payload.get("lsn"))
+                log_event(mongo_col, payload, status="success")
                 consumer.commit(msg)
-            except Exception:
+            except Exception as exc:
                 log.exception("failed to process message, will retry: %s", msg.value())
+                log_event(mongo_col, payload, status="error", error=str(exc))
                 time.sleep(1.0)
     finally:
         consumer.close()

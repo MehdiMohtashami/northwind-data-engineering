@@ -1,0 +1,29 @@
+# Phase 6B (optional, scoped): monitors traffic on the Kafka (9092) and SQL
+# Server (1433) flows at the generic flow level (source/dest, bytes,
+# duration, ports) via packetbeat.flows. Packetbeat 8.15's default build
+# doesn't register a "kafka" application-layer protocol plugin (logs
+# "Unknown protocol plugin: kafka" and simply skips it, non-fatal) and has
+# none at all for SQL Server's proprietary TDS protocol, so flow-level is
+# the achievable level of visibility here without a custom Packetbeat build.
+#
+# Runs with network_mode: host (see docker-compose.yml) so it can sniff the
+# host's own network interface where these ports are actually bound --
+# that's why output points at localhost:9200 rather than elasticsearch:9200
+# (host network mode has no access to the nw_de_net Docker DNS).
+packetbeat.interfaces.device: any
+
+packetbeat.flows:
+  timeout: 30s
+  period: 10s
+
+output.elasticsearch:
+  hosts: ["http://localhost:9200"]
+  index: "packetbeat-%{+yyyy.MM.dd}"
+
+setup.template.name: "packetbeat"
+setup.template.pattern: "packetbeat-*"
+setup.ilm.enabled: false
+
+logging.to_stderr: true
+logging.to_files: false
+logging.level: info
