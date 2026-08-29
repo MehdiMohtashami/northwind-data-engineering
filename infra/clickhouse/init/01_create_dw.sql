@@ -263,3 +263,9 @@ LEFT JOIN (SELECT * FROM NorthwindDW.DimEmployees  FINAL) AS e  ON f.EmployeeKey
 LEFT JOIN (SELECT * FROM NorthwindDW.DimShippers   FINAL) AS s  ON f.ShipperKey  = s.ShipperKey
 LEFT JOIN (SELECT * FROM NorthwindDW.DimGeography  FINAL) AS g  ON f.GeographyKey = g.GeographyKey
 LEFT JOIN (SELECT * FROM NorthwindDW.DimDate)             AS dd ON f.OrderDateKey = dd.DateKey;
+
+-- Phase 6C: Grafana KPI stat panels need plain thousands-grouped integers
+-- (e.g. "2,155", not "2K"). Grafana's built-in "none"/"short" units either
+-- show no grouping or auto-abbreviate with SI suffixes; there is no built-in
+-- unit that does both "exact" and "grouped". Format server-side instead.
+CREATE OR REPLACE FUNCTION fmt_int AS (x) -> reverse(arrayStringConcat(arrayMap(i -> substring(reverse(toString(toInt64(round(x)))), i*3+1, 3), range(intDiv(length(reverse(toString(toInt64(round(x)))))+2,3))), ','));

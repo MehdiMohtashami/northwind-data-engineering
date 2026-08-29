@@ -1,0 +1,103 @@
+{
+  "uid": "nw-executive-overview",
+  "title": "Northwind - Executive Overview",
+  "tags": ["northwind", "executive"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "graphTooltip": 1,
+  "time": { "from": "1996-01-01T00:00:00.000Z", "to": "1998-12-31T00:00:00.000Z" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Total Revenue",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT sum(LineTotal) AS \"Total Revenue\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Total Orders",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT fmt_int(uniqExact(OrderID)) AS \"Total Orders\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Total Line Items",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT fmt_int(count()) AS \"Total Line Items\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Total Quantity",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT fmt_int(sum(Quantity)) AS \"Total Quantity\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+    },
+    {
+      "id": 5, "type": "stat", "title": "Avg Order Value",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT sum(LineTotal) / uniqExact(OrderID) AS \"Avg Order Value\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+    },
+    {
+      "id": 6, "type": "stat", "title": "Total Freight (per order)",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT sum(Freight) AS \"Total Freight\" FROM (SELECT DISTINCT OrderID, Freight FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate))" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Revenue by Month",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 7 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "showPoints": "never" }, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
+      "options": { "legend": { "showLegend": false }, "tooltip": { "mode": "single" } },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 0,
+        "rawSql": "SELECT toStartOfMonth(OrderDate) AS time, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY time ORDER BY time" }]
+    },
+    {
+      "id": 8, "type": "barchart", "title": "Revenue by Year",
+      "gridPos": { "x": 0, "y": 11, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
+      "options": { "orientation": "vertical", "xTickLabelRotation": 0, "showValue": "always", "legend": { "showLegend": false } },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT concat('CY ', toString(OrderYear)) AS \"Year\", sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY OrderYear ORDER BY OrderYear ASC" }]
+    },
+    {
+      "id": 9, "type": "barchart", "title": "Seasonality: Revenue by Quarter (all years)",
+      "gridPos": { "x": 8, "y": 11, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
+      "options": { "orientation": "vertical", "xTickLabelRotation": 0, "showValue": "always", "legend": { "showLegend": false } },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
+        "rawSql": "SELECT concat('Q', toString(OrderQuarter)) AS \"Quarter\", sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY OrderQuarter ORDER BY OrderQuarter ASC" }]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Avg Order Value by Month",
+      "gridPos": { "x": 16, "y": 11, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "showPoints": "never" }, "color": { "mode": "fixed", "fixedColor": "#FF9830" } }, "overrides": [] },
+      "options": { "legend": { "showLegend": false }, "tooltip": { "mode": "single" } },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 0,
+        "rawSql": "SELECT toStartOfMonth(OrderDate) AS time, sum(LineTotal) / uniqExact(OrderID) AS avg_order_value FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY time ORDER BY time" }]
+    }
+  ]
+}
