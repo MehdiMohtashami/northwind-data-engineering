@@ -181,9 +181,11 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactOrders
     Discount         Float32,
     Freight          Nullable(Decimal(19,4)),
     is_deleted       UInt8 DEFAULT 0,
-    version          UInt64  -- widened from UInt32 in Phase 4: streaming writes use the
-                              -- first 8 bytes of the CDC LSN (big-endian) as version, so
-                              -- replays are truly idempotent (same LSN -> same version).
+    version          UInt64,  -- widened from UInt32 in Phase 4: streaming writes use the
+                               -- first 8 bytes of the CDC LSN (big-endian) as version, so
+                               -- replays are truly idempotent (same LSN -> same version).
+    inserted_at      DateTime DEFAULT now()  -- Phase 5: real wall-clock time a row/version
+                                              -- was written, for the live "recent activity" panel.
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY (OrderID, ProductKey);
@@ -220,11 +222,15 @@ SELECT
     s.ShipperID,
     s.CompanyName    AS ShipperName,
     f.ShipName,
+    g.Country        AS ShipCountry,
+    g.City           AS ShipCity,
+    g.Region         AS ShipRegion,
     f.UnitPrice AS UnitPrice,
     f.Quantity,
     f.Discount,
     f.Freight,
-    (f.UnitPrice * f.Quantity * (1 - f.Discount)) AS LineTotal
+    (f.UnitPrice * f.Quantity * (1 - f.Discount)) AS LineTotal,
+    f.inserted_at
 FROM
 (
     SELECT * FROM NorthwindDW.FactOrders FINAL WHERE is_deleted = 0
@@ -233,4 +239,5 @@ LEFT JOIN (SELECT * FROM NorthwindDW.DimProducts   FINAL) AS p  ON f.ProductKey 
 LEFT JOIN (SELECT * FROM NorthwindDW.DimCustomer   FINAL) AS c  ON f.CustomerKey = c.CustomerKey
 LEFT JOIN (SELECT * FROM NorthwindDW.DimEmployees  FINAL) AS e  ON f.EmployeeKey = e.EmployeeKey
 LEFT JOIN (SELECT * FROM NorthwindDW.DimShippers   FINAL) AS s  ON f.ShipperKey  = s.ShipperKey
+LEFT JOIN (SELECT * FROM NorthwindDW.DimGeography  FINAL) AS g  ON f.GeographyKey = g.GeographyKey
 LEFT JOIN (SELECT * FROM NorthwindDW.DimDate)             AS dd ON f.OrderDateKey = dd.DateKey;

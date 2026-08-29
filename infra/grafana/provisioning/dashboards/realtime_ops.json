@@ -1,0 +1,122 @@
+{
+  "uid": "nw-realtime-ops",
+  "title": "Northwind - Real-Time Operations",
+  "tags": ["northwind", "realtime", "streaming"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Current FactOrders Lines (live)",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": { "textMode": "value" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "text": { "valueSize": 72 }
+      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT count() AS \"Current Lines\" FROM v_FactOrders_Flat"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Revenue (live)",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT sum(LineTotal) AS \"Total Revenue\" FROM v_FactOrders_Flat"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Distinct Orders (live)",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT uniqExact(OrderID) AS \"Distinct Orders\" FROM v_FactOrders_Flat"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Rows Ingested per Minute (last 15 min, wall-clock)",
+      "description": "Uses FactOrders.inserted_at (real insertion wall-clock time), not OrderDate.",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT toStartOfMinute(inserted_at) AS time, count() AS rows_ingested FROM v_FactOrders_Flat WHERE inserted_at >= now() - INTERVAL 15 MINUTE GROUP BY time ORDER BY time"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Latest 20 Order Lines",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 10 },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [{ "matcher": { "id": "byName", "options": "LineTotal" }, "properties": [{ "id": "unit", "value": "currencyUSD" }] }]
+      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT OrderID, ProductName, Quantity, LineTotal, ShipCountry, inserted_at FROM v_FactOrders_Flat ORDER BY inserted_at DESC LIMIT 20"
+        }
+      ]
+    }
+  ]
+}

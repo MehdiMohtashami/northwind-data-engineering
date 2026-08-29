@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: ClickHouse-NorthwindDW
+    uid: clickhouse-northwinddw
     type: grafana-clickhouse-datasource
     access: proxy
     isDefault: true
