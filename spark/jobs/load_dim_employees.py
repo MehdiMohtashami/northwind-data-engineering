@@ -44,6 +44,16 @@ def main():
         key_out="GeographyKey",
     ).drop("Country", "Region", "City", "PostalCode", "reports_to")
 
+    # Phase 6A: data lake link. Deterministic from EmployeeID (= EmployeeCode),
+    # so it's set on every insert/expire-reinsert without needing to look up
+    # the MinIO catalog here -- not an scd_attr (never triggers a version
+    # bump on its own; it's a passthrough carried forward like GeographyKey).
+    pass1_src = (
+        pass1_src
+        .withColumn("PhotoObjectKey", F.concat(F.lit("EMP"), F.col("EmployeeID").cast("string"), F.lit(".png")))
+        .withColumn("PhotoUrl", F.concat(F.lit("http://localhost:9002/employee-photos/"), F.col("PhotoObjectKey")))
+    )
+
     scd_attrs = ["LastName", "FirstName", "Title", "TitleOfCourtesy", "BirthDate", "HireDate", "GeographyKey"]
     pass1_written = scd_lib.scd2_apply(
         pass1_src, "NorthwindDW.DimEmployees", key_col="EmployeeKey",

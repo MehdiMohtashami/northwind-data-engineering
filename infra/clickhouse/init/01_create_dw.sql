@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimGeography
     is_current   UInt8 DEFAULT 1,
     Startdate    Date DEFAULT toDate('1970-01-01'),
     Enddate      Date DEFAULT toDate('2099-12-31'),
-    version      UInt32,
+    version      UInt64,  -- widened from UInt32 in Phase 6A: epoch-millis versions were silently overflowing UInt32 via JDBC.
     is_inferred  UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimProducts
     is_current       UInt8 DEFAULT 1,
     Startdate        Date DEFAULT toDate('1970-01-01'),
     Enddate          Date DEFAULT toDate('2099-12-31'),
-    version          UInt32,
+    version          UInt64,  -- widened from UInt32 in Phase 6A: epoch-millis versions were silently overflowing UInt32 via JDBC.
     is_inferred      UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimCustomer
     is_current    UInt8 DEFAULT 1,
     Startdate     Date DEFAULT toDate('1970-01-01'),
     Enddate       Date DEFAULT toDate('2099-12-31'),
-    version       UInt32,
+    version       UInt64,  -- widened from UInt32 in Phase 6A: epoch-millis versions were silently overflowing UInt32 via JDBC.
     is_inferred   UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
@@ -92,11 +92,33 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimEmployees
     is_current       UInt8 DEFAULT 1,
     Startdate        Date DEFAULT toDate('1970-01-01'),
     Enddate          Date DEFAULT toDate('2099-12-31'),
-    version          UInt32,
-    is_inferred      UInt8 DEFAULT 0
+    version          UInt64,  -- widened from UInt32 in Phase 6A: epoch-millis versions from
+                               -- the Spark SCD jobs were silently overflowing UInt32 via JDBC
+                               -- (harmless so far by luck, but not guaranteed -- same class of
+                               -- bug fixed for FactOrders/DimSuppliers in Phases 3-4).
+    is_inferred      UInt8 DEFAULT 0,
+    PhotoObjectKey   String DEFAULT '',  -- Phase 6A: data lake link, e.g. "EMP1.png"
+    PhotoUrl         String DEFAULT ''   -- Phase 6A: public MinIO URL for the above object
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY EmployeeKey;
+
+-- Phase 6A: data lake metadata catalog. Represents the lakehouse metadata
+-- layer -- links to objects stored in MinIO (bucket employee-photos), keyed
+-- by EmployeeCode (= EmployeeAlternateKey / OLTP EmployeeID). Independent of
+-- DimEmployees -- joined by EmployeeCode, not a foreign key.
+CREATE TABLE IF NOT EXISTS NorthwindDW.employee_photo_catalog
+(
+    EmployeeCode  String,
+    EmployeeID    Int32,
+    ObjectKey     String,
+    Url           String,
+    ContentType   String,
+    SizeBytes     UInt32,
+    UploadedAt    DateTime DEFAULT now()
+)
+ENGINE = ReplacingMergeTree(UploadedAt)
+ORDER BY EmployeeCode;
 
 CREATE TABLE IF NOT EXISTS NorthwindDW.DimTerritories
 (
@@ -107,7 +129,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimTerritories
     is_current            UInt8 DEFAULT 1,
     Startdate             Date DEFAULT toDate('1970-01-01'),
     Enddate               Date DEFAULT toDate('2099-12-31'),
-    version               UInt32
+    version               UInt64  -- widened from UInt32 in Phase 6A: epoch-millis versions were silently overflowing UInt32 via JDBC.
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY TerritoryKey;
@@ -120,7 +142,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.DimShippers
     ShipperID    Int32,
     CompanyName  String,
     Phone        Nullable(String),
-    version      UInt32,
+    version      UInt64,  -- widened from UInt32 in Phase 6A: epoch-millis versions were silently overflowing UInt32 via JDBC.
     is_inferred  UInt8 DEFAULT 0
 )
 ENGINE = ReplacingMergeTree(version)
@@ -197,7 +219,7 @@ CREATE TABLE IF NOT EXISTS NorthwindDW.FactEmployeeTerritories
     EmployeeKey   UInt32,
     TerritoryKey  UInt32,
     is_deleted    UInt8 DEFAULT 0,
-    version       UInt32
+    version       UInt64  -- widened from UInt32 in Phase 6A: epoch-millis versions were silently overflowing UInt32 via JDBC.
 )
 ENGINE = ReplacingMergeTree(version)
 ORDER BY (EmployeeKey, TerritoryKey);

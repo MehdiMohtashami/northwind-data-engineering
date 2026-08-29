@@ -72,6 +72,8 @@ docker exec nw_de_sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 
 | Spark master UI          | 8081           | maps to container 8080                   |
 | Spark master RPC          | 7077          |                                            |
 | Grafana                    | 3000         | ClickHouse datasource pre-provisioned      |
+| MinIO API                    | 9002       | S3-compatible, bucket `employee-photos` (public read) |
+| MinIO console                  | 9003     | not 9000/9001 (MinIO's defaults) -- those collide with ClickHouse |
 
 Host ports 5432 (Postgres), 6379 (Redis), and 3306 (MySQL) are intentionally
 **not** used — those belong to the pre-existing `postgres_django`,
@@ -87,6 +89,7 @@ never touched by this stack.
 | ClickHouse  | default   | see `CLICKHOUSE_PASSWORD` in `.env` |
 | Airflow     | admin     | admin            |
 | Grafana     | admin     | admin (default, change on first login) |
+| MinIO       | see `MINIO_ROOT_USER` in `.env` | see `MINIO_ROOT_PASSWORD` in `.env` |
 
 ## Layout
 

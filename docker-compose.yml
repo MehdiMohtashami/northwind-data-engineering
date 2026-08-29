@@ -9,6 +9,7 @@ volumes:
   postgres_airflow_data:
   spark_data:
   grafana_data:
+  minio_data:
 
 x-airflow-common: &airflow-common
   build:
@@ -260,5 +261,25 @@ services:
       - kafka
       - sqlserver
       - clickhouse
+    networks:
+      - nw_de_net
+
+  minio:
+    image: minio/minio:latest
+    container_name: nw_de_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - nw_de_net

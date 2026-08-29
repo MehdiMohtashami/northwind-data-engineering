@@ -1,0 +1,51 @@
+{
+  "uid": "nw-employee-directory",
+  "title": "Northwind - Employee Directory",
+  "tags": ["northwind", "datalake", "employees"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": { "from": "now-5y", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Employee Directory (photos from MinIO data lake, linked by EmployeeCode)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 16 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Photo" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "image" } },
+              { "id": "custom.width", "value": 100 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "PhotoObjectKey" },
+            "properties": [{ "id": "custom.hidden", "value": true }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "lg"
+      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT EmployeeID AS \"EmployeeCode\", concat(FirstName, ' ', LastName) AS \"EmployeeName\", Title, PhotoUrl AS \"Photo\", PhotoObjectKey FROM DimEmployees FINAL WHERE is_current = 1 ORDER BY EmployeeID"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "employee_code": "EMP1",
+    "employee_id": 1,
+    "object_key": "EMP1.png",
+    "url": "http://localhost:9002/employee-photos/EMP1.png",
+    "content_type": "image/png",
+    "size_bytes": 4788
+  },
+  {
+    "employee_code": "EMP2",
+    "employee_id": 2,
+    "object_key": "EMP2.png",
+    "url": "http://localhost:9002/employee-photos/EMP2.png",
+    "content_type": "image/png",
+    "size_bytes": 4179
+  },
+  {
+    "employee_code": "EMP3",
+    "employee_id": 3,
+    "object_key": "EMP3.png",
+    "url": "http://localhost:9002/employee-photos/EMP3.png",
+    "content_type": "image/png",
+    "size_bytes": 3405
+  },
+  {
+    "employee_code": "EMP4",
+    "employee_id": 4,
+    "object_key": "EMP4.png",
+    "url": "http://localhost:9002/employee-photos/EMP4.png",
+    "content_type": "image/png",
+    "size_bytes": 4522
+  },
+  {
+    "employee_code": "EMP5",
+    "employee_id": 5,
+    "object_key": "EMP5.png",
+    "url": "http://localhost:9002/employee-photos/EMP5.png",
+    "content_type": "image/png",
+    "size_bytes": 5701
+  },
+  {
+    "employee_code": "EMP6",
+    "employee_id": 6,
+    "object_key": "EMP6.png",
+    "url": "http://localhost:9002/employee-photos/EMP6.png",
+    "content_type": "image/png",
+    "size_bytes": 6051
+  },
+  {
+    "employee_code": "EMP7",
+    "employee_id": 7,
+    "object_key": "EMP7.png",
+    "url": "http://localhost:9002/employee-photos/EMP7.png",
+    "content_type": "image/png",
+    "size_bytes": 5244
+  },
+  {
+    "employee_code": "EMP8",
+    "employee_id": 8,
+    "object_key": "EMP8.png",
+    "url": "http://localhost:9002/employee-photos/EMP8.png",
+    "content_type": "image/png",
+    "size_bytes": 4911
+  },
+  {
+    "employee_code": "EMP9",
+    "employee_id": 9,
+    "object_key": "EMP9.png",
+    "url": "http://localhost:9002/employee-photos/EMP9.png",
+    "content_type": "image/png",
+    "size_bytes": 5353
+  }
+]
