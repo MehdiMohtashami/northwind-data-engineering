@@ -1,84 +1,551 @@
 {
   "uid": "nw-realtime-ops",
   "title": "Northwind - Real-Time Operations",
-  "tags": ["northwind", "realtime"],
+  "tags": [
+    "northwind",
+    "realtime"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "5s",
-  "liveNow": true,
   "graphTooltip": 1,
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
-      "id": 1, "type": "stat", "title": "Current FactOrders Lines",
-      "gridPos": { "x": 0, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT fmt_int(count()) AS \"Current Lines\" FROM v_FactOrders_Flat" }]
-    },
-    {
-      "id": 2, "type": "stat", "title": "Total Revenue (live)",
-      "gridPos": { "x": 5, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT sum(LineTotal) AS \"Total Revenue\" FROM v_FactOrders_Flat" }]
-    },
-    {
-      "id": 3, "type": "stat", "title": "Distinct Orders (live)",
-      "gridPos": { "x": 10, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT fmt_int(uniqExact(OrderID)) AS \"Distinct Orders\" FROM v_FactOrders_Flat" }]
-    },
-    {
-      "id": 4, "type": "stat", "title": "Distinct Products (live)",
-      "gridPos": { "x": 15, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT fmt_int(uniqExact(ProductID)) AS \"Distinct Products\" FROM v_FactOrders_Flat" }]
-    },
-    {
-      "id": 5, "type": "stat", "title": "Last Ingest",
-      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
-      "fieldConfig": { "defaults": { "unit": "dateTimeFromNow", "color": { "mode": "fixed", "fixedColor": "#FF9830" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT max(inserted_at) AS \"Last Ingest\" FROM v_FactOrders_Flat" }]
-    },
-    {
-      "id": 6, "type": "table", "title": "Latest 20 Order Lines",
-      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 9 },
+      "id": 1,
+      "type": "stat",
+      "title": "Live Line Count",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
       "fieldConfig": {
-        "defaults": { "custom": { "align": "left" } },
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT time, sum(cnt) OVER (ORDER BY time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"Live Line Count\" FROM (SELECT toStartOfHour(inserted_at) AS time, count() AS cnt FROM v_FactOrders_Flat GROUP BY time ORDER BY time)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Rows Ingested (last 1h)",
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT time, sum(cnt) OVER (ORDER BY time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"Rows (1h)\" FROM (SELECT toStartOfMinute(now() - INTERVAL 1 HOUR) AS time, 0 AS cnt UNION ALL SELECT toStartOfMinute(inserted_at) AS time, count() AS cnt FROM v_FactOrders_Flat WHERE inserted_at >= now() - INTERVAL 1 HOUR GROUP BY toStartOfMinute(inserted_at)) ORDER BY time"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Rows Ingested (last 5 min)",
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT time, sum(cnt) OVER (ORDER BY time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"Rows (5m)\" FROM (SELECT toStartOfMinute(now() - INTERVAL 5 MINUTE) AS time, 0 AS cnt UNION ALL SELECT toStartOfMinute(inserted_at) AS time, count() AS cnt FROM v_FactOrders_Flat WHERE inserted_at >= now() - INTERVAL 5 MINUTE GROUP BY toStartOfMinute(inserted_at)) ORDER BY time"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Avg Ingest Latency (ms)",
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9830"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "es-cdc-events"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "es-cdc-events"
+          },
+          "query": "*",
+          "timeField": "@timestamp",
+          "metrics": [
+            {
+              "type": "avg",
+              "field": "latency_ms",
+              "id": "1"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "id": "2",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": "0"
+              }
+            }
+          ]
+        }
+      ],
+      "timeFrom": "1h"
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last Ingest",
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8E8E8E"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT max(inserted_at) AS \"Last Ingest\" FROM v_FactOrders_Flat"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Latest 20 Order Lines",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left"
+          }
+        },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "LineTotal" }, "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 2 }] },
-          { "matcher": { "id": "byName", "options": "Quantity" }, "properties": [{ "id": "unit", "value": "none" }, { "id": "decimals", "value": 0 }] }
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "LineTotal"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Quantity"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
         ]
       },
-      "options": { "showHeader": true, "cellHeight": "sm" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT OrderID, ProductName, Quantity, LineTotal, ShipCountry, inserted_at FROM v_FactOrders_Flat ORDER BY inserted_at DESC LIMIT 20" }]
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT OrderID, ProductName, Quantity, LineTotal, ShipCountry, inserted_at FROM v_FactOrders_Flat ORDER BY inserted_at DESC LIMIT 20"
+        }
+      ]
     },
     {
-      "id": 7, "type": "timeseries", "title": "Rows Ingested per Minute (last 6h)",
-      "description": "Uses FactOrders.inserted_at (real insertion wall-clock time), not OrderDate. Gaps are filled with 0 via ClickHouse WITH FILL.",
-      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0, "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 80, "pointSize": 0, "showPoints": "never" }, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "legend": { "showLegend": false }, "tooltip": { "mode": "single" } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 0,
-        "rawSql": "SELECT time, rows_ingested FROM (SELECT toStartOfMinute(inserted_at) AS time, count() AS rows_ingested FROM v_FactOrders_Flat WHERE inserted_at >= $__fromTime AND inserted_at <= $__toTime GROUP BY time ORDER BY time WITH FILL FROM toStartOfMinute($__fromTime) TO toStartOfMinute($__toTime) STEP INTERVAL 1 MINUTE)" }]
+      "id": 7,
+      "type": "timeseries",
+      "title": "Rows Ingested per Minute (last 24h)",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "lineInterpolation": "linear",
+            "pointSize": 5,
+            "showPoints": "never"
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT time, rows_ingested FROM (SELECT toStartOfMinute(inserted_at) AS time, count() AS rows_ingested FROM v_FactOrders_Flat WHERE inserted_at >= now() - INTERVAL 24 HOUR GROUP BY time ORDER BY time WITH FILL FROM toStartOfMinute(now() - INTERVAL 24 HOUR) TO toStartOfMinute(now()) STEP INTERVAL 1 MINUTE)"
+        }
+      ],
+      "description": "Uses FactOrders.inserted_at (real insertion wall-clock time), not OrderDate. Gaps are filled with 0 via ClickHouse WITH FILL."
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Events by Operation (Insert / Update / Delete)",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "pointSize": 0,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "I"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3274D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "U"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4162A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "es-cdc-events"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "es-cdc-events"
+          },
+          "query": "*",
+          "timeField": "@timestamp",
+          "metrics": [
+            {
+              "type": "count",
+              "id": "1"
+            }
+          ],
+          "bucketAggs": [
+            {
+              "type": "terms",
+              "field": "op",
+              "id": "3",
+              "settings": {
+                "size": "5",
+                "order": "desc",
+                "orderBy": "_term",
+                "min_doc_count": "0"
+              }
+            },
+            {
+              "type": "date_histogram",
+              "field": "@timestamp",
+              "id": "2",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": "0"
+              }
+            }
+          ]
+        }
+      ],
+      "timeFrom": "24h"
     }
-  ]
+  ],
+  "liveNow": true
 }

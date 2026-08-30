@@ -1,85 +1,468 @@
 {
   "uid": "nw-customer-geography",
   "title": "Northwind - Customer & Geography",
-  "tags": ["northwind", "customer"],
+  "tags": [
+    "northwind",
+    "customer"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "",
   "graphTooltip": 1,
-  "time": { "from": "1996-01-01T00:00:00.000Z", "to": "1998-12-31T00:00:00.000Z" },
+  "time": {
+    "from": "1996-01-01T00:00:00.000Z",
+    "to": "1998-12-31T00:00:00.000Z"
+  },
   "panels": [
     {
-      "id": 1, "type": "stat", "title": "Distinct Customers",
-      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT fmt_int(uniqExact(CustomerID)) AS \"Distinct Customers\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+      "id": 1,
+      "type": "stat",
+      "title": "Distinct Customers",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "WITH first_seen AS (SELECT CustomerID, min(toStartOfMonth(OrderDate)) AS fm FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CustomerID) SELECT fm AS time, sum(cnt) OVER (ORDER BY fm ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"Distinct Customers\" FROM (SELECT fm, count() AS cnt FROM first_seen GROUP BY fm ORDER BY fm) ORDER BY fm"
+        }
+      ]
     },
     {
-      "id": 2, "type": "stat", "title": "Avg Revenue per Customer",
-      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT sum(LineTotal) / uniqExact(CustomerID) AS \"Avg Revenue per Customer\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+      "id": 2,
+      "type": "stat",
+      "title": "Avg Revenue per Customer",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "WITH (SELECT uniqExact(CustomerID) FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)) AS total_customers SELECT bucket_time AS time, cum_rev / total_customers AS \"Avg Revenue per Customer\" FROM (SELECT bucket_time, sum(revenue) OVER (ORDER BY bucket_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_rev FROM (SELECT toStartOfMonth(OrderDate) AS bucket_time, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY bucket_time ORDER BY bucket_time)) ORDER BY bucket_time"
+        }
+      ]
     },
     {
-      "id": 3, "type": "stat", "title": "Top Customer",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF9830" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT CustomerName AS \"Top Customer\" FROM (SELECT CustomerName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CustomerName ORDER BY revenue DESC LIMIT 1)" }]
+      "id": 3,
+      "type": "stat",
+      "title": "Top Customer",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9830"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT CustomerName AS \"Top Customer\" FROM (SELECT CustomerName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CustomerName ORDER BY revenue DESC LIMIT 1)"
+        }
+      ]
     },
     {
-      "id": 4, "type": "stat", "title": "Top Country",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF9830" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT ShipCountry AS \"Top Country\" FROM (SELECT ShipCountry, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipCountry ORDER BY revenue DESC LIMIT 1)" }]
+      "id": 4,
+      "type": "stat",
+      "title": "Top Country",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9830"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT ShipCountry AS \"Top Country\" FROM (SELECT ShipCountry, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipCountry ORDER BY revenue DESC LIMIT 1)"
+        }
+      ]
     },
     {
-      "id": 5, "type": "barchart", "title": "Revenue by Country (Top 10)",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT ShipCountry, revenue FROM (SELECT ShipCountry, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipCountry ORDER BY revenue DESC LIMIT 10) ORDER BY revenue ASC" }]
+      "id": 5,
+      "type": "geomap",
+      "title": "Revenue by Country (map)",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 0,
+          "color": {
+            "mode": "continuous-GrYlRd"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "basemap": {
+          "type": "osm-standard",
+          "name": "Basemap",
+          "config": {}
+        },
+        "controls": {
+          "showZoom": true,
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showScale": false,
+          "showMeasure": false,
+          "showDebug": false
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Revenue",
+            "config": {
+              "style": {
+                "size": {
+                  "fixed": 5,
+                  "min": 4,
+                  "max": 28,
+                  "field": "revenue"
+                },
+                "color": {
+                  "field": "revenue",
+                  "fixed": "#37872D"
+                },
+                "opacity": 0.8,
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              },
+              "showLegend": true
+            },
+            "location": {
+              "mode": "lookup",
+              "lookup": "iso3",
+              "gazetteer": "public/gazetteer/countries.json"
+            }
+          }
+        ],
+        "view": {
+          "id": "fixed",
+          "lat": 35,
+          "lon": 5,
+          "zoom": 1.6
+        },
+        "tooltip": {
+          "mode": "details"
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT CASE ShipCountry WHEN 'Argentina' THEN 'ARG' WHEN 'Austria' THEN 'AUT' WHEN 'Belgium' THEN 'BEL' WHEN 'Brazil' THEN 'BRA' WHEN 'Canada' THEN 'CAN' WHEN 'Denmark' THEN 'DNK' WHEN 'Finland' THEN 'FIN' WHEN 'France' THEN 'FRA' WHEN 'Germany' THEN 'DEU' WHEN 'Ireland' THEN 'IRL' WHEN 'Italy' THEN 'ITA' WHEN 'Mexico' THEN 'MEX' WHEN 'Norway' THEN 'NOR' WHEN 'Poland' THEN 'POL' WHEN 'Portugal' THEN 'PRT' WHEN 'Spain' THEN 'ESP' WHEN 'Sweden' THEN 'SWE' WHEN 'Switzerland' THEN 'CHE' WHEN 'UK' THEN 'GBR' WHEN 'USA' THEN 'USA' WHEN 'Venezuela' THEN 'VEN' ELSE 'unknown' END AS iso3, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY iso3"
+        }
+      ]
     },
     {
-      "id": 6, "type": "barchart", "title": "Top 10 Customers by Revenue",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT CustomerName, revenue FROM (SELECT CustomerName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CustomerName ORDER BY revenue DESC LIMIT 10) ORDER BY revenue ASC" }]
+      "id": 6,
+      "type": "barchart",
+      "title": "Top 10 Customers by Revenue",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT CustomerName, revenue FROM (SELECT CustomerName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CustomerName ORDER BY revenue DESC LIMIT 10) ORDER BY revenue ASC"
+        }
+      ]
     },
     {
-      "id": 7, "type": "barchart", "title": "Revenue by Region (Top 10, where recorded)",
-      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT ShipRegion, revenue FROM (SELECT ShipRegion, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) AND ShipRegion IS NOT NULL GROUP BY ShipRegion ORDER BY revenue DESC LIMIT 10) ORDER BY revenue ASC" }]
+      "id": 7,
+      "type": "bargauge",
+      "title": "Revenue by Region (where recorded)",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "values": true,
+          "calcs": [],
+          "fields": ""
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT ShipRegion, revenue FROM (SELECT ShipRegion, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) AND ShipRegion IS NOT NULL GROUP BY ShipRegion ORDER BY revenue DESC LIMIT 10) ORDER BY revenue DESC"
+        }
+      ]
     },
     {
-      "id": 8, "type": "barchart", "title": "Number of Customers by Country (Top 10)",
-      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT ShipCountry, customers FROM (SELECT ShipCountry, uniqExact(CustomerID) AS customers FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipCountry ORDER BY customers DESC LIMIT 10) ORDER BY customers ASC" }]
+      "id": 8,
+      "type": "barchart",
+      "title": "Number of Customers by Country (Top 10)",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT ShipCountry, customers FROM (SELECT ShipCountry, uniqExact(CustomerID) AS customers FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipCountry ORDER BY customers DESC LIMIT 10) ORDER BY customers ASC"
+        }
+      ]
     }
   ]
 }

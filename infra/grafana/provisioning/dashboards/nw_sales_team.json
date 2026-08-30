@@ -1,103 +1,546 @@
 {
   "uid": "nw-sales-team-fulfillment",
   "title": "Northwind - Sales Team & Fulfillment",
-  "tags": ["northwind", "sales-team"],
+  "tags": [
+    "northwind",
+    "sales-team"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "",
   "graphTooltip": 1,
-  "time": { "from": "1996-01-01T00:00:00.000Z", "to": "1998-12-31T00:00:00.000Z" },
+  "time": {
+    "from": "1996-01-01T00:00:00.000Z",
+    "to": "1998-12-31T00:00:00.000Z"
+  },
   "panels": [
     {
-      "id": 1, "type": "stat", "title": "Distinct Employees",
-      "gridPos": { "x": 0, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT fmt_int(uniqExact(EmployeeID)) AS \"Distinct Employees\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+      "id": 1,
+      "type": "stat",
+      "title": "Distinct Employees",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "WITH first_seen AS (SELECT EmployeeID, min(toStartOfMonth(OrderDate)) AS fm FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeID) SELECT fm AS time, sum(cnt) OVER (ORDER BY fm ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"Distinct Employees\" FROM (SELECT fm, count() AS cnt FROM first_seen GROUP BY fm ORDER BY fm) ORDER BY fm"
+        }
+      ]
     },
     {
-      "id": 2, "type": "stat", "title": "Top Performer",
-      "gridPos": { "x": 5, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "#FF9830" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT EmployeeName AS \"Top Performer\" FROM (SELECT EmployeeName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeName ORDER BY revenue DESC LIMIT 1)" }]
+      "id": 2,
+      "type": "stat",
+      "title": "Top Performer",
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9830"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT EmployeeName AS \"Top Performer\" FROM (SELECT EmployeeName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeName ORDER BY revenue DESC LIMIT 1)"
+        }
+      ]
     },
     {
-      "id": 3, "type": "stat", "title": "Avg Revenue per Employee",
-      "gridPos": { "x": 10, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT sum(LineTotal) / uniqExact(EmployeeID) AS \"Avg Revenue per Employee\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)" }]
+      "id": 3,
+      "type": "stat",
+      "title": "Avg Revenue per Employee",
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "WITH (SELECT uniqExact(EmployeeID) FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate)) AS total_employees SELECT bucket_time AS time, cum_rev / total_employees AS \"Avg Revenue per Employee\" FROM (SELECT bucket_time, sum(revenue) OVER (ORDER BY bucket_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_rev FROM (SELECT toStartOfMonth(OrderDate) AS bucket_time, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY bucket_time ORDER BY bucket_time)) ORDER BY bucket_time"
+        }
+      ]
     },
     {
-      "id": 4, "type": "stat", "title": "% Orders Shipped",
-      "gridPos": { "x": 15, "y": 0, "w": 5, "h": 4 },
-      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT round(100.0 * countIf(t.shipped_dk IS NOT NULL) / count(), 2) AS \"% Orders Shipped\" FROM (SELECT OrderID, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey WHERE $__timeFilter(od.FullDate)" }]
+      "id": 4,
+      "type": "stat",
+      "title": "% Orders Shipped",
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 5,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT bucket_time AS time, 100.0 * sum(shipped) OVER (ORDER BY bucket_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) / sum(total) OVER (ORDER BY bucket_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"% Shipped\" FROM (SELECT toStartOfMonth(od.FullDate) AS bucket_time, countIf(t.shipped_dk IS NOT NULL) AS shipped, count() AS total FROM (SELECT OrderID, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey WHERE $__timeFilter(od.FullDate) GROUP BY bucket_time ORDER BY bucket_time) ORDER BY bucket_time"
+        }
+      ]
     },
     {
-      "id": 5, "type": "stat", "title": "Avg Days to Ship",
-      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
-      "fieldConfig": { "defaults": { "unit": "none", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" }, "colorMode": "value", "graphMode": "none", "justifyMode": "auto", "textMode": "value" },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT round(avg(dateDiff('day', od.FullDate, sd.FullDate)), 1) AS \"Avg Days to Ship\" FROM (SELECT OrderID, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey INNER JOIN DimDate sd ON t.shipped_dk = sd.DateKey WHERE t.shipped_dk IS NOT NULL AND $__timeFilter(od.FullDate)" }]
+      "id": 5,
+      "type": "stat",
+      "title": "Avg Days to Ship",
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8E8E8E"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 0,
+          "rawSql": "SELECT bucket_time AS time, sum(days_sum) OVER (ORDER BY bucket_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) / sum(shipped_cnt) OVER (ORDER BY bucket_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS \"Avg Days to Ship\" FROM (SELECT toStartOfMonth(od.FullDate) AS bucket_time, sum(dateDiff('day', od.FullDate, sd.FullDate)) AS days_sum, count() AS shipped_cnt FROM (SELECT OrderID, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey INNER JOIN DimDate sd ON t.shipped_dk = sd.DateKey WHERE t.shipped_dk IS NOT NULL AND $__timeFilter(od.FullDate) GROUP BY bucket_time ORDER BY bucket_time) ORDER BY bucket_time"
+        }
+      ]
     },
     {
-      "id": 6, "type": "barchart", "title": "Revenue by Employee",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT EmployeeName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeName ORDER BY revenue ASC" }]
+      "id": 6,
+      "type": "barchart",
+      "title": "Revenue by Employee",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT EmployeeName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeName ORDER BY revenue ASC"
+        }
+      ]
     },
     {
-      "id": 7, "type": "barchart", "title": "Orders Handled by Employee",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#73BF69" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT EmployeeName, uniqExact(OrderID) AS orders FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeName ORDER BY orders ASC" }]
+      "id": 7,
+      "type": "barchart",
+      "title": "Orders Handled by Employee",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT EmployeeName, uniqExact(OrderID) AS orders FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY EmployeeName ORDER BY orders ASC"
+        }
+      ]
     },
     {
-      "id": 8, "type": "barchart", "title": "Revenue by Shipper",
-      "gridPos": { "x": 0, "y": 12, "w": 8, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "#5794F2" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT ShipperName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipperName ORDER BY revenue ASC" }]
+      "id": 8,
+      "type": "barchart",
+      "title": "Revenue by Shipper",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 7,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#37872D"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT ShipperName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ShipperName ORDER BY revenue ASC"
+        }
+      ]
     },
     {
-      "id": 9, "type": "piechart", "title": "Shipped vs Pending",
-      "gridPos": { "x": 8, "y": 12, "w": 8, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0 }, "overrides": [] },
-      "options": { "pieType": "donut", "displayLabels": ["percent", "value"], "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "reduceOptions": { "values": true, "calcs": [], "fields": "" } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT if(t.shipped_dk IS NULL, 'Pending', 'Shipped') AS status, count() AS orders FROM (SELECT OrderID, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey WHERE $__timeFilter(od.FullDate) GROUP BY status" }]
+      "id": 9,
+      "type": "piechart",
+      "title": "Shipped vs Pending",
+      "gridPos": {
+        "x": 7,
+        "y": 12,
+        "w": 10,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Shipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#37872D"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C4162A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent",
+          "value"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT countIf(t.shipped_dk IS NOT NULL) AS Shipped, countIf(t.shipped_dk IS NULL) AS Pending FROM (SELECT OrderID, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey WHERE $__timeFilter(od.FullDate)"
+        }
+      ]
     },
     {
-      "id": 10, "type": "barchart", "title": "Avg Days to Ship by Shipper",
-      "gridPos": { "x": 16, "y": 12, "w": 8, "h": 8 },
-      "fieldConfig": { "defaults": { "unit": "none", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "#FF9830" } }, "overrides": [] },
-      "options": { "orientation": "horizontal", "showValue": "always", "legend": { "showLegend": false } },
-      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" },
-      "targets": [{ "refId": "A", "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-northwinddw" }, "queryType": "sql", "editorType": "sql", "format": 1,
-        "rawSql": "SELECT sh.CompanyName AS ShipperName, round(avg(dateDiff('day', od.FullDate, sd.FullDate)), 1) AS avg_days FROM (SELECT OrderID, any(ShipperKey) AS shipper_key, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey INNER JOIN DimDate sd ON t.shipped_dk = sd.DateKey INNER JOIN (SELECT * FROM DimShippers FINAL) sh ON t.shipper_key = sh.ShipperKey WHERE t.shipped_dk IS NOT NULL AND $__timeFilter(od.FullDate) GROUP BY sh.CompanyName ORDER BY avg_days ASC" }]
+      "id": 10,
+      "type": "barchart",
+      "title": "Avg Days to Ship by Shipper",
+      "gridPos": {
+        "x": 17,
+        "y": 12,
+        "w": 7,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FF9830"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-northwinddw"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-northwinddw"
+          },
+          "queryType": "sql",
+          "editorType": "sql",
+          "format": 1,
+          "rawSql": "SELECT sh.CompanyName AS ShipperName, round(avg(dateDiff('day', od.FullDate, sd.FullDate)), 1) AS avg_days FROM (SELECT OrderID, any(ShipperKey) AS shipper_key, any(OrderDateKey) AS order_dk, any(ShippedDateKey) AS shipped_dk FROM FactOrders FINAL WHERE is_deleted = 0 GROUP BY OrderID) t INNER JOIN DimDate od ON t.order_dk = od.DateKey INNER JOIN DimDate sd ON t.shipped_dk = sd.DateKey INNER JOIN (SELECT * FROM DimShippers FINAL) sh ON t.shipper_key = sh.ShipperKey WHERE t.shipped_dk IS NOT NULL AND $__timeFilter(od.FullDate) GROUP BY sh.CompanyName ORDER BY avg_days ASC"
+        }
+      ]
     }
   ]
 }

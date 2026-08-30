@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: Elasticsearch-CDCEvents
+    uid: es-cdc-events
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    isDefault: false
+    jsonData:
+      index: "nw-cdc-events-*"
+      timeField: "@timestamp"
+      esVersion: "8.0.0"
+      maxConcurrentShardRequests: 5
+      logMessageField: ""
+      logLevelField: ""
