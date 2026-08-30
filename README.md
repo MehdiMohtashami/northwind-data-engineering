@@ -150,6 +150,6 @@ The pipeline's output matches the canonical Northwind figures exactly:
 ## 👤 Author
 
 Built as a final data-engineering project.
-�ℹ️ Repo: **northwind-data-engineering**
+ℹ️ Repo: **northwind-data-engineering**
 
 <p align="center"><i>Change something in the source. Watch the dashboard move. That's the whole point.</i></p>
