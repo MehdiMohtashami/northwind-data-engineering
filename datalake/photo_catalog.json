@@ -5,7 +5,8 @@
     "object_key": "EMP1.png",
     "url": "http://localhost:9002/employee-photos/EMP1.png",
     "content_type": "image/png",
-    "size_bytes": 4788
+    "size_bytes": 19525,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP2",
@@ -13,7 +14,8 @@
     "object_key": "EMP2.png",
     "url": "http://localhost:9002/employee-photos/EMP2.png",
     "content_type": "image/png",
-    "size_bytes": 4179
+    "size_bytes": 18693,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP3",
@@ -21,7 +23,8 @@
     "object_key": "EMP3.png",
     "url": "http://localhost:9002/employee-photos/EMP3.png",
     "content_type": "image/png",
-    "size_bytes": 3405
+    "size_bytes": 16908,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP4",
@@ -29,7 +32,8 @@
     "object_key": "EMP4.png",
     "url": "http://localhost:9002/employee-photos/EMP4.png",
     "content_type": "image/png",
-    "size_bytes": 4522
+    "size_bytes": 16969,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP5",
@@ -37,7 +41,8 @@
     "object_key": "EMP5.png",
     "url": "http://localhost:9002/employee-photos/EMP5.png",
     "content_type": "image/png",
-    "size_bytes": 5701
+    "size_bytes": 17425,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP6",
@@ -45,7 +50,8 @@
     "object_key": "EMP6.png",
     "url": "http://localhost:9002/employee-photos/EMP6.png",
     "content_type": "image/png",
-    "size_bytes": 6051
+    "size_bytes": 16476,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP7",
@@ -53,7 +59,8 @@
     "object_key": "EMP7.png",
     "url": "http://localhost:9002/employee-photos/EMP7.png",
     "content_type": "image/png",
-    "size_bytes": 5244
+    "size_bytes": 19170,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP8",
@@ -61,7 +68,8 @@
     "object_key": "EMP8.png",
     "url": "http://localhost:9002/employee-photos/EMP8.png",
     "content_type": "image/png",
-    "size_bytes": 4911
+    "size_bytes": 15000,
+    "source": "real_photo"
   },
   {
     "employee_code": "EMP9",
@@ -69,6 +77,7 @@
     "object_key": "EMP9.png",
     "url": "http://localhost:9002/employee-photos/EMP9.png",
     "content_type": "image/png",
-    "size_bytes": 5353
+    "size_bytes": 16882,
+    "source": "real_photo"
   }
 ]

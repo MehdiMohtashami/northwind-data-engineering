@@ -19,7 +19,8 @@
     {
       "id": 1,
       "type": "table",
-      "title": "Employee Directory (photos from MinIO data lake, linked by EmployeeCode)",
+      "title": "Employee Directory - Real Northwind Employee Photos",
+      "description": "Photos are stored as objects in the MinIO data lake (object storage), keyed by EmployeeCode -- the ClickHouse warehouse holds only the EmployeeCode -> PhotoUrl metadata pointer, not the image bytes themselves. This is the lakehouse pattern: bulky unstructured assets live in cheap object storage, while the warehouse stays lean and query-fast.",
       "gridPos": {
         "x": 0,
         "y": 0,

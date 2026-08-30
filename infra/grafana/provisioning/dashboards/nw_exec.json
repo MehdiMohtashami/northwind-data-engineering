@@ -274,6 +274,7 @@
       "id": 6,
       "type": "stat",
       "title": "Revenue Growth YoY % (CY1997 vs CY1996)",
+      "description": "1996 is a partial year (Northwind data starts 1996-07), so this is not a like-for-like 12-vs-12-month comparison.",
       "gridPos": {
         "x": 20,
         "y": 0,

@@ -7,7 +7,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "",
   "graphTooltip": 1,
   "time": {
@@ -221,12 +221,12 @@
     },
     {
       "id": 5,
-      "type": "barchart",
+      "type": "piechart",
       "title": "Revenue by Category",
       "gridPos": {
         "x": 0,
         "y": 4,
-        "w": 12,
+        "w": 8,
         "h": 8
       },
       "fieldConfig": {
@@ -234,18 +234,32 @@
           "unit": "currencyUSD",
           "decimals": 0,
           "color": {
-            "mode": "fixed",
-            "fixedColor": "#37872D"
+            "mode": "palette-classic"
           }
         },
         "overrides": []
       },
       "options": {
-        "orientation": "horizontal",
-        "xTickLabelRotation": 0,
-        "showValue": "always",
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
         "legend": {
-          "showLegend": false
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "reduceOptions": {
+          "values": true,
+          "calcs": [],
+          "fields": ""
         }
       },
       "datasource": {
@@ -262,7 +276,7 @@
           "queryType": "sql",
           "editorType": "sql",
           "format": 1,
-          "rawSql": "SELECT CategoryName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CategoryName ORDER BY revenue ASC"
+          "rawSql": "SELECT CategoryName, sum(LineTotal) AS revenue FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CategoryName ORDER BY revenue DESC"
         }
       ]
     },
@@ -271,9 +285,9 @@
       "type": "barchart",
       "title": "Top 10 Products by Revenue",
       "gridPos": {
-        "x": 12,
+        "x": 8,
         "y": 4,
-        "w": 12,
+        "w": 16,
         "h": 8
       },
       "fieldConfig": {
@@ -291,6 +305,7 @@
         "orientation": "horizontal",
         "xTickLabelRotation": 0,
         "showValue": "always",
+        "barWidth": 0.7,
         "legend": {
           "showLegend": false
         }
@@ -315,31 +330,48 @@
     },
     {
       "id": 7,
-      "type": "barchart",
+      "type": "bargauge",
       "title": "Avg Discount % by Category",
       "gridPos": {
         "x": 0,
         "y": 12,
-        "w": 12,
+        "w": 8,
         "h": 8
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
           "decimals": 1,
+          "min": 0,
+          "max": 0.08,
           "color": {
-            "mode": "fixed",
-            "fixedColor": "#FF9830"
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "#FF9830"
+              },
+              {
+                "value": 0.06,
+                "color": "#C4162A"
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
         "orientation": "horizontal",
-        "xTickLabelRotation": 0,
-        "showValue": "always",
-        "legend": {
-          "showLegend": false
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "values": true,
+          "calcs": [],
+          "fields": ""
         }
       },
       "datasource": {
@@ -356,38 +388,147 @@
           "queryType": "sql",
           "editorType": "sql",
           "format": 1,
-          "rawSql": "SELECT CategoryName, avg(Discount) AS avg_discount FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CategoryName ORDER BY avg_discount ASC"
+          "rawSql": "SELECT CategoryName, avg(Discount) AS avg_discount FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY CategoryName ORDER BY avg_discount DESC"
         }
       ]
     },
     {
       "id": 8,
-      "type": "barchart",
-      "title": "Top 10 Products by Units Sold",
+      "type": "table",
+      "title": "Top 10 Products - Revenue vs Units vs Avg Price",
       "gridPos": {
-        "x": 12,
+        "x": 8,
         "y": 12,
-        "w": 12,
+        "w": 16,
         "h": 8
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "decimals": 0,
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
           "color": {
             "mode": "fixed",
             "fixedColor": "#3274D9"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ProductName"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Revenue"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#37872D"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Units Sold"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3274D9"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 200
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Unit Price"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "orientation": "horizontal",
-        "xTickLabelRotation": 0,
-        "showValue": "always",
-        "legend": {
-          "showLegend": false
-        }
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Revenue",
+            "desc": true
+          }
+        ]
       },
       "datasource": {
         "type": "grafana-clickhouse-datasource",
@@ -403,7 +544,7 @@
           "queryType": "sql",
           "editorType": "sql",
           "format": 1,
-          "rawSql": "SELECT ProductName, units FROM (SELECT ProductName, sum(Quantity) AS units FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ProductName ORDER BY units DESC LIMIT 10) ORDER BY units ASC"
+          "rawSql": "SELECT ProductName, sum(LineTotal) AS Revenue, sum(Quantity) AS \"Units Sold\", avg(UnitPrice) AS \"Avg Unit Price\" FROM v_FactOrders_Flat WHERE $__timeFilter(OrderDate) GROUP BY ProductName ORDER BY Revenue DESC LIMIT 10"
         }
       ]
     }
