@@ -1,117 +1,155 @@
-# Northwind Data Engineering — Phase 0
+<h1 align="center">🌪️ Northwind Real-Time Data Warehouse</h1>
 
-Isolated Docker Compose stack for the Northwind data-engineering final project.
-Compose project name: `nw_de`. Network: `nw_de_net`. All named volumes are
-project-scoped (`nw_de_<volume>`), so this stack is fully isolated from any
-other Docker workloads on the host.
+<p align="center">
+  <b>A legacy SSIS batch pipeline, re-imagined as a fully containerized, near-real-time data platform.</b><br/>
+  From a change in the source database to a moving number on a dashboard — in <b>seconds</b>, not overnight.
+</p>
 
-## Prerequisites
+<p align="center">
+  <img alt="SQL Server" src="https://img.shields.io/badge/Source-SQL%20Server%20(CDC)-CC2927?logo=microsoftsqlserver&logoColor=white">
+  <img alt="Airflow" src="https://img.shields.io/badge/Orchestration-Apache%20Airflow-017CEE?logo=apacheairflow&logoColor=white">
+  <img alt="Spark" src="https://img.shields.io/badge/Transform-PySpark-E25A1C?logo=apachespark&logoColor=white">
+  <img alt="Kafka" src="https://img.shields.io/badge/Streaming-Apache%20Kafka-231F20?logo=apachekafka&logoColor=white">
+  <img alt="ClickHouse" src="https://img.shields.io/badge/Warehouse-ClickHouse-FFCC01?logo=clickhouse&logoColor=black">
+  <img alt="Grafana" src="https://img.shields.io/badge/Dashboards-Grafana-F46800?logo=grafana&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Runs%20on-Docker-2496ED?logo=docker&logoColor=white">
+</p>
 
-- Docker + Docker Compose v2
-- The three backup files placed in `backups/` (git-ignored):
-  - `Northwind.bak` — OLTP source (`Northwind` DB, the CDC source)
-  - `instnwnd.sql` — fallback OLTP install script (unused unless `.bak` restore fails)
-  - `Northwind_DW_1404_08_14_Full.bak` — professor's reference DW backup
-- JDBC driver jars (git-ignored binaries): run `spark/jars/download_jars.sh` once
-  after cloning to fetch the Postgres and ClickHouse JDBC drivers used by the
-  PySpark load jobs.
+---
 
-## Up / Down
+## 📖 The Story
 
-```bash
-# start everything
-docker compose up -d
+The original teaching model was a classic Microsoft BI stack: **SQL Server → SSIS packages → SQL Server DW**, scheduled through SQL Server Agent jobs. It worked — but it was **batch-only**. Every change to the business waited hours for the next job to run before it showed up in reporting.
 
-# check status
-docker compose ps
+This project rebuilds that same idea on a **modern, open-source, containerized data stack** and removes the time-lag entirely. Dimensions still refresh in disciplined nightly batches, but **facts now stream in near-real-time** through Change Data Capture and Kafka. The whole platform stands up with Docker and is version-controlled end to end.
 
-# stop everything (keeps volumes/data)
-docker compose down
+The dataset is the well-known **Northwind** sample (customers, orders, products, employees, shippers, territories).
 
-# stop and wipe all data volumes (destructive, this project's volumes only)
-docker compose down -v
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    subgraph SRC["🟥 Source — OLTP"]
+        SQL[(SQL Server<br/>Northwind + CDC)]
+    end
+
+    subgraph BATCH["🟦 Batch path — Dimensions"]
+        AF[Apache Airflow<br/>Python 3.10]
+        PG[(PostgreSQL<br/>Staging)]
+        SP[PySpark<br/>SCD 0/1/2]
+    end
+
+    subgraph STREAM["🟩 Streaming path — Facts"]
+        PRD[Kafka Producer<br/>tails CDC]
+        KAF{{Apache Kafka}}
+        CON[Kafka Consumer]
+    end
+
+    subgraph DW["🟨 Warehouse"]
+        CH[(ClickHouse<br/>Star schema + Flat view)]
+    end
+
+    subgraph LAKE["🪣 Data Lake"]
+        MIN[(MinIO<br/>Employee photos)]
+    end
+
+    subgraph OBS["🔎 Observability"]
+        MON[(MongoDB log)]
+        ELK[Logstash → Elasticsearch → Kibana<br/>+ Filebeat / Packetbeat]
+    end
+
+    GRA[📊 Grafana<br/>5 KPI dashboards]
+
+    SQL --> AF --> PG --> SP --> CH
+    SQL -- change data --> PRD --> KAF --> CON --> CH
+    CON --> MON --> ELK
+    CH --> GRA
+    MIN -. EmployeeCode .-> CH
+    CH --> GRA
+
+    style SRC fill:#4a1c1c,stroke:#cc2927,color:#fff
+    style BATCH fill:#12233a,stroke:#3274d9,color:#fff
+    style STREAM fill:#12331f,stroke:#37872d,color:#fff
+    style DW fill:#3a3312,stroke:#ffcc01,color:#fff
 ```
 
-### First-time SQL Server restore (manual, one-time)
+Everything runs in one **Docker Compose** project on an isolated network.
 
-The `sqlserver` service does not auto-restore backups. After it reports
-healthy:
+---
 
-```bash
-# 1) Restore the OLTP source
-docker exec nw_de_sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -N -Q "
-RESTORE DATABASE Northwind
-FROM DISK = N'/backups/Northwind.bak'
-WITH MOVE 'Northwind'     TO '/var/opt/mssql/data/northwnd.mdf',
-     MOVE 'Northwind_log' TO '/var/opt/mssql/data/northwnd_log.ldf',
-     REPLACE;"
+## ✨ What it does
 
-# 2) Restore the professor's reference DW (logical names discovered via RESTORE FILELISTONLY)
-docker exec nw_de_sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -N -Q "
-RESTORE DATABASE Northwind_DW
-FROM DISK = N'/backups/Northwind_DW_1404_08_14_Full.bak'
-WITH MOVE 'Northwind_BI_1404_05_DW'     TO '/var/opt/mssql/data/Northwind_DW.mdf',
-     MOVE 'Northwind_BI_1404_05_DW_log' TO '/var/opt/mssql/data/Northwind_DW_log.ldf',
-     REPLACE;"
+- **Captures every change** to the source (insert / update / delete) on `Orders` and `Order Details` via SQL Server **CDC**, tracked with LSN watermarks.
+- **Loads dimensions** the right way with **Slowly Changing Dimensions** — Type 0 (fixed), Type 1 (overwrite), and Type 2 (full history with `is_current` + start/end dates) — computed in **PySpark** on a real Spark cluster.
+- **Streams facts in near-real-time**: a Python producer tails CDC and publishes to **Kafka**; a consumer writes to **ClickHouse** in **~2–6 seconds** end to end.
+- **Serves analytics** through five single-screen **Grafana** dashboards, plus a live operations monitor.
+- **Stores unstructured data in a lakehouse pattern**: employee photos live in **MinIO** object storage; the warehouse keeps only the `EmployeeCode → URL` metadata.
+- **Monitors itself**: every streamed event is logged to **MongoDB** and shipped through **Logstash → Elasticsearch → Kibana**, with Filebeat and Packetbeat for logs and network flow.
 
-# 3) Create ETL_Settings and enable CDC on Northwind (run AFTER step 1)
-docker exec nw_de_sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -N \
-  -i /docker-entrypoint-initdb.d/01_etl_settings_and_cdc.sql
-```
+---
 
-## Ports
+## 🧩 Tech stack
 
-| Service            | Host port(s)     | Notes                                   |
-|---------------------|------------------|------------------------------------------|
-| SQL Server           | 1433             | OLTP `Northwind`, `Northwind_DW`, `ETL_Settings` |
-| Postgres (staging)    | 5433             | maps to container 5432                  |
-| ClickHouse            | 8123 (HTTP), 9000 (native) | `NorthwindDW` database        |
-| Kafka                 | 9092             | internal listener `kafka:29092`         |
-| Zookeeper              | (internal only) | 2181, not exposed to host                |
-| Airflow webserver       | 8080            | LocalExecutor, metadata DB is internal-only `postgres_airflow` |
-| Spark master UI          | 8081           | maps to container 8080                   |
-| Spark master RPC          | 7077          |                                            |
-| Grafana                    | 3000         | ClickHouse datasource pre-provisioned      |
-| MinIO API                    | 9002       | S3-compatible, bucket `employee-photos` (public read) |
-| MinIO console                  | 9003     | not 9000/9001 (MinIO's defaults) -- those collide with ClickHouse |
+| Layer | Technology |
+|---|---|
+| Source (OLTP) | SQL Server 2022 · Change Data Capture |
+| Orchestration | Apache Airflow (Python 3.10) |
+| Transformation | Apache Spark / PySpark |
+| Staging | PostgreSQL |
+| Data Warehouse | ClickHouse (ReplacingMergeTree, star + flat view) |
+| Streaming | Apache Kafka |
+| Data Lake | MinIO (S3-compatible) |
+| Observability | MongoDB · Elasticsearch · Logstash · Kibana · Filebeat · Packetbeat |
+| Visualization | Grafana |
+| Platform | Docker · Docker Compose · Git |
 
-Host ports 5432 (Postgres), 6379 (Redis), and 3306 (MySQL) are intentionally
-**not** used — those belong to the pre-existing `postgres_django`,
-`redis_django`, and `local-mysql` containers from a different project and are
-never touched by this stack.
+---
 
-## Default accounts
+## 🧠 The hard problems it solves
 
-| Service     | User      | Password         |
-|-------------|-----------|------------------|
-| SQL Server  | sa        | see `MSSQL_SA_PASSWORD` in `.env` |
-| Postgres staging | see `PG_STAGING_USER` in `.env` | see `PG_STAGING_PASSWORD` in `.env` |
-| ClickHouse  | default   | see `CLICKHOUSE_PASSWORD` in `.env` |
-| Airflow     | admin     | admin            |
-| Grafana     | admin     | admin (default, change on first login) |
-| MinIO       | see `MINIO_ROOT_USER` in `.env` | see `MINIO_ROOT_PASSWORD` in `.env` |
+- **Master/Detail fan-out** — an order-header change correctly propagates to *every* line of that order, not just one.
+- **Self-referencing employee hierarchy** — `DimEmployees` resolves the "reports-to" chain (the real Northwind org chart) via a two-pass parent-key load.
+- **Inferred members** — a fact that arrives before its dimension gets a placeholder row that later self-heals.
+- **Delete semantics in a columnar store** — handled with a versioned `ReplacingMergeTree` and an `is_deleted` flag.
+- **Two watermarks, no double-processing** — the batch and streaming paths track LSNs independently.
 
-## Layout
+---
 
-```
-infra/sqlserver/init/     -- ETL_Settings schema + CDC enable script (run manually, see above)
-infra/postgres/init/      -- staging schema (auto-runs on first postgres_staging boot)
-infra/clickhouse/init/    -- NorthwindDW star schema + DimDate seed (auto-runs on first clickhouse boot)
-infra/grafana/provisioning/ -- ClickHouse datasource provisioning
-airflow/{dags,plugins,logs}/ -- empty, DAGs come in a later phase
-spark/                    -- empty, Spark jobs come in a later phase
-streaming/{producer,consumer}/ -- empty, Kafka producer/consumer come in a later phase
-sql/                      -- ad-hoc SQL / reconciliation notes
-docs/                     -- project docs
-```
+## 📊 Dashboards
 
-## Notes / known deviations
+Five purpose-built, single-screen KPI pages (no scrolling, no duplicated metrics):
 
-- `bitnami/spark:3.5` was removed from Docker Hub; the stack uses
-  `bitnamilegacy/spark:3.5` instead (same version, legacy registry).
-- The professor's reference `Northwind_DW` (restored into SQL Server for
-  inspection) does not have a separate `DimShipName` table — `ShipName` is a
-  degenerate attribute directly on `FactOrders`, and it also has
-  `DimTerritories` / `FactEmployeeTerritories`, which are not part of our
-  locked ClickHouse star schema. See project chat history / `docs/` for the
-  full reconciliation if you want to adjust the ClickHouse DDL to match.
+1. **Executive Overview** — headline KPIs, revenue trend, seasonality.
+2. **Product & Category** — revenue share (donut), top products, discount gauges, a rich comparison table.
+3. **Customer & Geography** — a world map, top customers, regional breakdowns.
+4. **Sales Team & Fulfillment** — performance by employee and shipper, on-time shipping.
+5. **Real-Time Operations** — live ingest rate, latency, and the last orders as they stream in.
+
+Plus an **Employee Directory** showcasing the data-lake pattern with real employee photos served from MinIO.
+
+> _Screenshots in [`/docs/screenshots`](docs/screenshots)._
+
+---
+
+## ✅ Validated against ground truth
+
+The pipeline's output matches the canonical Northwind figures exactly:
+
+| Metric | Value |
+|---|---|
+| Total revenue | **$1,265,793.04** |
+| Total freight | **$64,942.69** |
+| Orders | 830 |
+| Order lines | 2,155 |
+| Products | 77 · Customers | 89 · Employees | 9 |
+
+---
+
+## 👤 Author
+
+Built as a final data-engineering project.
+�ℹ️ Repo: **northwind-data-engineering**
+
+<p align="center"><i>Change something in the source. Watch the dashboard move. That's the whole point.</i></p>
